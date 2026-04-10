@@ -404,10 +404,11 @@ FRONTEND_DIST = Path(__file__).parent / "frontend" / "dist"
 if FRONTEND_DIST.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
-    @app.get("/{full_path:path}", include_in_schema=False)
-    def serve_frontend(full_path: str):
-        # Let /api/* routes handle themselves (should never reach here)
-        file = FRONTEND_DIST / full_path
-        if file.exists() and file.is_file():
-            return FileResponse(file)
-        return FileResponse(FRONTEND_DIST / "index.html")
+@app.get("/{full_path:path}", include_in_schema=False)
+def serve_frontend(full_path: str):
+    if not FRONTEND_DIST.exists():
+        return {"status": "ok", "message": "Campsite Sniper API is running"}
+    file = FRONTEND_DIST / full_path
+    if file.exists() and file.is_file():
+        return FileResponse(file)
+    return FileResponse(FRONTEND_DIST / "index.html")
