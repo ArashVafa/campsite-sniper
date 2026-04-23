@@ -4,12 +4,12 @@ import axios from "axios"
 const API = import.meta.env.VITE_API_URL || ""
 
 const PATTERNS = [
-  { value: "summer_weekends", label: "Summer weekends",        desc: "Fri + Sat nights" },
-  { value: "any_weekend",     label: "Any weekend",            desc: "Fri + Sat nights" },
-  { value: "weekend_friday",  label: "Long weekend",           desc: "Thu + Fri + Sat nights" },
-  { value: "weekdays_only",   label: "Weekdays only",          desc: "Mon–Thu nights" },
-  { value: "any_consecutive", label: "Any consecutive nights", desc: "Any nights in range" },
-  { value: "exact",           label: "Exact dates",            desc: "Manual date entry" },
+  { value: "fri_sat",         label: "Fri + Sat nights",         desc: "Check in Friday, out Sunday (2 nights)",  nights: 2 },
+  { value: "sat_sun",         label: "Sat + Sun nights",         desc: "Check in Saturday, out Monday (2 nights)", nights: 2 },
+  { value: "fri_sat_sun",     label: "Fri + Sat + Sun nights",   desc: "Check in Friday, out Monday (3 nights)",  nights: 3 },
+  { value: "weekdays_only",   label: "Weekdays only",            desc: "Mon–Thu check-in, any length" },
+  { value: "any_consecutive", label: "Any consecutive nights",   desc: "Any nights in range" },
+  { value: "exact",           label: "Exact dates",              desc: "Manual date entry" },
 ]
 
 // ── Auth helpers ─────────────────────────────────────────────────────────
@@ -194,7 +194,7 @@ function MainApp({ user, onLogout, onOpenProfile }) {
   // ── Date params ─────────────────────────────────────────
   const [dateStart,        setDateStart]        = useState("")
   const [dateEnd,          setDateEnd]          = useState("")
-  const [selectedPatterns, setSelectedPatterns] = useState(["summer_weekends"])
+  const [selectedPatterns, setSelectedPatterns] = useState(["fri_sat"])
   const [minNights,        setMinNights]        = useState(2)
   const [maxNights,        setMaxNights]        = useState("")
   const [exactDates,       setExactDates]       = useState("")
@@ -290,15 +290,15 @@ function MainApp({ user, onLogout, onOpenProfile }) {
 
   const removeCampground = (id) => setSelectedCampgrounds(prev => prev.filter(c => c.id !== id))
 
-  const WEEKEND_PATTERNS = new Set(["summer_weekends", "any_weekend", "weekend_friday"])
   const togglePattern = (value) => {
+    const meta = PATTERNS.find(p => p.value === value)
     setSelectedPatterns(prev => prev.includes(value) ? prev.filter(p => p !== value) : [...prev, value])
-    if (WEEKEND_PATTERNS.has(value) && Number(minNights) < 2) setMinNights(2)
+    if (meta?.nights) { setMinNights(meta.nights); setMaxNights(meta.nights) }
   }
 
   const resetForm = () => {
     setSelectedCampgrounds([]); setSearchQuery(""); setSearchResults([]); setSearchError("")
-    setDateStart(""); setDateEnd(""); setSelectedPatterns(["summer_weekends"])
+    setDateStart(""); setDateEnd(""); setSelectedPatterns(["fri_sat"])
     setMinNights(2); setMaxNights(""); setExactDates(""); setPreview(null)
   }
 

@@ -357,11 +357,16 @@ def expand_dates(req: DateExpandRequest):
     max_n = req.max_nights if req.max_nights else min_n
 
     PATTERN_DAYS = {
-        "summer_weekends": {4, 5},
-        "any_weekend":     {4, 5},   # Fri+Sat check-in nights (check in Fri, checkout Sun)
-        "weekend_friday":  {3, 4, 5},  # Thu+Fri+Sat (extended weekend, checkout Sun)
+        # Current patterns
+        "fri_sat":         {4, 5},          # Fri+Sat nights → check in Fri, out Sun
+        "sat_sun":         {5, 6},          # Sat+Sun nights → check in Sat, out Mon
+        "fri_sat_sun":     {4, 5, 6},       # Fri+Sat+Sun nights → check in Fri, out Mon
         "weekdays_only":   {0, 1, 2, 3},
         "any_consecutive": {0, 1, 2, 3, 4, 5, 6},
+        # Legacy aliases (for existing watches)
+        "summer_weekends": {4, 5},
+        "any_weekend":     {4, 5},
+        "weekend_friday":  {4, 5, 6},
     }
     allowed = PATTERN_DAYS.get(req.pattern, {0, 1, 2, 3, 4, 5, 6})
 
