@@ -3,6 +3,12 @@ import axios from "axios"
 
 const API = import.meta.env.VITE_API_URL || ""
 
+function toPST(isoStr) {
+  if (!isoStr) return "—"
+  const d = new Date(isoStr.includes("Z") || isoStr.includes("+") ? isoStr : isoStr + "Z")
+  return d.toLocaleString("en-US", { timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) + " PST"
+}
+
 const PATTERNS = [
   { value: "fri_sat",         label: "Fri + Sat nights",         desc: "Check in Friday, out Sunday (2 nights)",  nights: 2 },
   { value: "sat_sun",         label: "Sat + Sun nights",         desc: "Check in Saturday, out Monday (2 nights)", nights: 2 },
@@ -378,7 +384,7 @@ function MainApp({ user, onLogout, onOpenProfile }) {
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
         <StatCard label="Snapshots"           value={stats.total_snapshots ?? 0} />
         <StatCard label="Cancellations found" value={stats.total_cancellations ?? 0} />
-        <StatCard label="Last poll"           value={stats.last_poll ? stats.last_poll.slice(11, 19) : "—"} />
+        <StatCard label="Last poll"           value={toPST(stats.last_poll)} />
       </div>
 
       {/* ── Form ─────────────────────────────────────────── */}
@@ -572,9 +578,9 @@ function MainApp({ user, onLogout, onOpenProfile }) {
       {activity.length === 0 && <p style={{ color: "#888" }}>No cancellations detected yet — poller is watching!</p>}
       {activity.map((a, i) => (
         <div key={i} style={{ ...cardStyle, borderLeft: "4px solid #16a34a" }}>
-          <strong>🏕 Site {a.site_id}</strong> at campground {a.campground_id}
+          <strong>{a.campground_name}</strong>
           <div style={{ color: "#555", marginTop: 4 }}>
-            Date: {a.date} · Detected: {a.detected_at.slice(0, 19).replace("T", " ")}
+            Site {a.site_id} · Available: {a.date} · Found: {toPST(a.detected_at)}
           </div>
           <a href={`https://www.recreation.gov/camping/campgrounds/${a.campground_id}`}
             target="_blank" rel="noreferrer"

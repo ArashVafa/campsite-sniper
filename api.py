@@ -192,10 +192,12 @@ def get_activity(limit: int = 20, current_user: dict = Depends(get_current_user)
     conn = db.get_conn()
     placeholders = ",".join("?" * len(cg_ids))
     rows = conn.execute(f"""
-        SELECT campground_id, site_id, date, from_status, to_status, detected_at
-        FROM state_transitions
-        WHERE to_status = 'Available' AND campground_id IN ({placeholders})
-        ORDER BY detected_at DESC
+        SELECT st.campground_id, st.site_id, st.date, st.detected_at,
+               COALESCE(c.name, st.campground_id) AS campground_name
+        FROM state_transitions st
+        LEFT JOIN campgrounds c ON st.campground_id = c.id
+        WHERE st.to_status = 'Available' AND st.campground_id IN ({placeholders})
+        ORDER BY st.detected_at DESC
         LIMIT ?
     """, cg_ids + [limit]).fetchall()
     conn.close()
