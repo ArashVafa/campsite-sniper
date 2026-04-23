@@ -5,8 +5,8 @@ const API = import.meta.env.VITE_API_URL || ""
 
 const PATTERNS = [
   { value: "summer_weekends", label: "Summer weekends",        desc: "Fri + Sat nights" },
-  { value: "any_weekend",     label: "Any weekend",            desc: "Sat + Sun nights" },
-  { value: "weekend_friday",  label: "Weekend + Friday",       desc: "Fri + Sat + Sun nights" },
+  { value: "any_weekend",     label: "Any weekend",            desc: "Fri + Sat nights" },
+  { value: "weekend_friday",  label: "Long weekend",           desc: "Thu + Fri + Sat nights" },
   { value: "weekdays_only",   label: "Weekdays only",          desc: "Mon–Thu nights" },
   { value: "any_consecutive", label: "Any consecutive nights", desc: "Any nights in range" },
   { value: "exact",           label: "Exact dates",            desc: "Manual date entry" },
@@ -290,8 +290,11 @@ function MainApp({ user, onLogout, onOpenProfile }) {
 
   const removeCampground = (id) => setSelectedCampgrounds(prev => prev.filter(c => c.id !== id))
 
-  const togglePattern = (value) =>
+  const WEEKEND_PATTERNS = new Set(["summer_weekends", "any_weekend", "weekend_friday"])
+  const togglePattern = (value) => {
     setSelectedPatterns(prev => prev.includes(value) ? prev.filter(p => p !== value) : [...prev, value])
+    if (WEEKEND_PATTERNS.has(value) && Number(minNights) < 2) setMinNights(2)
+  }
 
   const resetForm = () => {
     setSelectedCampgrounds([]); setSearchQuery(""); setSearchResults([]); setSearchError("")

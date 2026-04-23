@@ -358,8 +358,8 @@ def expand_dates(req: DateExpandRequest):
 
     PATTERN_DAYS = {
         "summer_weekends": {4, 5},
-        "any_weekend":     {5, 6},
-        "weekend_friday":  {4, 5, 6},
+        "any_weekend":     {4, 5},   # Fri+Sat check-in nights (check in Fri, checkout Sun)
+        "weekend_friday":  {3, 4, 5},  # Thu+Fri+Sat (extended weekend, checkout Sun)
         "weekdays_only":   {0, 1, 2, 3},
         "any_consecutive": {0, 1, 2, 3, 4, 5, 6},
     }
