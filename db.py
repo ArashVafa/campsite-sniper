@@ -1,8 +1,11 @@
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = Path("data/campsite.db")
+_data_dir = Path(os.environ.get("DATA_DIR", "data"))
+_data_dir.mkdir(parents=True, exist_ok=True)
+DB_PATH = _data_dir / "campsite.db"
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH)

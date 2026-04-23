@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: campsite-sniper
+    runtime: python
+    buildCommand: pip install -r requirements.txt && npm install --prefix frontend && npm run build --prefix frontend
+    startCommand: bash start.sh
+    plan: starter          # $7/mo — required for persistent disk; change to "free" to test (disk won't persist)
+    healthCheckPath: /api/health
+
+    disk:
+      name: campsite-data
+      mountPath: /data
+      sizeGB: 1
+
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: POLL_INTERVAL_MINUTES
+        value: "5"
+      - key: SECRET_KEY
+        generateValue: true       # Render generates a random value automatically
+      # ── Fill these in Render dashboard after first deploy ──
+      - key: FRONTEND_ORIGIN
+        sync: false               # e.g. https://campsite-sniper.onrender.com
+      - key: RIDB_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: EMAIL_APP_PASSWORD
+        sync: false
+      - key: NTFY_TOPIC
+        sync: false

@@ -66,15 +66,14 @@
 ## Completed Work
 
 - Initial MVP: polling, detection, notifications, multi-user auth, dashboard
-- **Railway deployment prep:**
-  - Secrets moved from hardcoded `config.py` → environment variables (`os.environ.get`)
-  - `.env.example` created with all required vars documented
-  - `.gitignore` added (excludes `.env`, `venv/`, `data/*.db`, `frontend/dist/`)
-  - CORS now reads `FRONTEND_ORIGIN` env var (falls back to localhost for dev)
-  - FastAPI serves built React frontend from `frontend/dist/` in production
-  - `requirements.txt` added
-  - `Procfile` added: `web` runs uvicorn, `worker` runs poller
-  - `nixpacks.toml` added: builds Node (React) + Python in one Railway service
+- **Render deployment (current target):**
+  - Both web server and poller run in a single Render Web Service via `start.sh`
+  - SQLite database lives on a Render persistent disk mounted at `/DATA_DIR` (`/data`)
+  - `db.py` reads `DATA_DIR` env var so DB path works locally (`data/`) and on Render (`/data/`)
+  - `render.yaml` defines the full service config — one `git push` deploys everything
+  - `/api/health` endpoint added for Render health checks
+  - See `DEPLOY.md` for the full step-by-step deployment guide
+  - Railway was attempted but abandoned — its shared-disk model doesn't fit SQLite + 2 processes
 
 ---
 

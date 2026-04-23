@@ -140,6 +140,11 @@ def login(req: LoginRequest):
     return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"]}}
 
 
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.get("/api/auth/me")
 def me(current_user: dict = Depends(get_current_user)):
     user = db.get_user_by_id(current_user["user_id"])
