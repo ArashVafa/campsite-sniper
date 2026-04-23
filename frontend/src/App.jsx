@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import axios from "axios"
 
-const API = "http://localhost:8000"
+const API = import.meta.env.VITE_API_URL || ""
 
 const PATTERNS = [
   { value: "summer_weekends", label: "Summer weekends",        desc: "Fri + Sat nights" },
