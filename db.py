@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 _data_dir = Path(os.environ.get("DATA_DIR", "data"))
@@ -101,6 +101,15 @@ def init_db():
             status        TEXT NOT NULL,
             updated_at    TEXT NOT NULL,
             PRIMARY KEY (campground_id, site_id, date)
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            token      TEXT PRIMARY KEY,
+            user_id    INTEGER NOT NULL,
+            expires_at TEXT NOT NULL,
+            used       INTEGER DEFAULT 0
         )
     """)
 
@@ -257,6 +266,48 @@ def save_transition(campground_id, site_id, date, from_status, to_status, detect
     ))
     conn.commit()
     conn.close()
+
+
+def update_user_name(user_id: int, name: str):
+    conn = get_conn()
+    conn.execute("UPDATE users SET name = ? WHERE id = ?", (name, user_id))
+    conn.commit()
+    conn.close()
+
+
+def update_password(user_id: int, password_hash: str):
+    conn = get_conn()
+    conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+    conn.commit()
+    conn.close()
+
+
+def create_reset_token(user_id: int, token: str):
+    expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO password_reset_tokens (token, user_id, expires_at) VALUES (?, ?, ?)",
+        (token, user_id, expires_at)
+    )
+    conn.commit()
+    conn.close()
+
+
+def use_reset_token(token: str):
+    """Returns user_id if token is valid and unused, else None. Marks it used."""
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT user_id, expires_at, used FROM password_reset_tokens WHERE token = ?",
+        (token,)
+    ).fetchone()
+    if not row or row["used"] or row["expires_at"] < datetime.now(timezone.utc).isoformat():
+        conn.close()
+        return None
+    conn.execute("UPDATE password_reset_tokens SET used = 1 WHERE token = ?", (token,))
+    conn.commit()
+    user_id = row["user_id"]
+    conn.close()
+    return user_id
 
 
 def update_last_status(campground_id, site_id, date, status, updated_at):

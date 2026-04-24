@@ -31,22 +31,33 @@ function authAxios() {
 // ── Auth screens ──────────────────────────────────────────────────────────
 
 function AuthScreen({ onLogin }) {
-  const [mode, setMode]       = useState("login") // "login" | "register"
+  const tokenParam = new URLSearchParams(window.location.search).get("token")
+  const [mode, setMode]       = useState(tokenParam ? "reset" : "login")
   const [email, setEmail]     = useState("")
   const [name, setName]       = useState("")
   const [password, setPassword] = useState("")
   const [error, setError]     = useState("")
+  const [info, setInfo]       = useState("")
   const [loading, setLoading] = useState(false)
 
   const submit = async () => {
-    setError("")
+    setError(""); setInfo("")
     setLoading(true)
     try {
-      const url = mode === "login" ? `${API}/api/auth/login` : `${API}/api/auth/register`
-      const body = mode === "login" ? { email, password } : { email, name, password }
-      const resp = await axios.post(url, body)
-      setToken(resp.data.token)
-      onLogin(resp.data.user)
+      if (mode === "login" || mode === "register") {
+        const url = mode === "login" ? `${API}/api/auth/login` : `${API}/api/auth/register`
+        const body = mode === "login" ? { email, password } : { email, name, password }
+        const resp = await axios.post(url, body)
+        setToken(resp.data.token)
+        onLogin(resp.data.user)
+      } else if (mode === "forgot") {
+        await axios.post(`${API}/api/auth/forgot-password`, { email })
+        setInfo("If that email exists, a reset link is on its way.")
+      } else if (mode === "reset") {
+        await axios.post(`${API}/api/auth/reset-password`, { token: tokenParam, password })
+        setInfo("Password updated! You can now sign in.")
+        setTimeout(() => { window.history.replaceState({}, "", "/"); setMode("login") }, 2000)
+      }
     } catch (e) {
       setError(e.response?.data?.detail || "Something went wrong")
     } finally {
@@ -59,15 +70,20 @@ function AuthScreen({ onLogin }) {
       <div style={{ ...cardStyle, width: 360, padding: "2rem" }}>
         <h2 style={{ margin: "0 0 1.5rem", textAlign: "center" }}>🏕 Campsite Sniper</h2>
 
-        <div style={{ display: "flex", marginBottom: "1.5rem", borderRadius: 8, overflow: "hidden", border: "1px solid #e2e8f0" }}>
-          {["login", "register"].map(m => (
-            <button key={m} onClick={() => { setMode(m); setError("") }}
-              style={{ flex: 1, padding: "0.6rem", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.9rem",
-                background: mode === m ? "#2563eb" : "#fff", color: mode === m ? "#fff" : "#64748b" }}>
-              {m === "login" ? "Sign In" : "Create Account"}
-            </button>
-          ))}
-        </div>
+        {(mode === "login" || mode === "register") && (
+          <div style={{ display: "flex", marginBottom: "1.5rem", borderRadius: 8, overflow: "hidden", border: "1px solid #e2e8f0" }}>
+            {["login", "register"].map(m => (
+              <button key={m} onClick={() => { setMode(m); setError(""); setInfo("") }}
+                style={{ flex: 1, padding: "0.6rem", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.9rem",
+                  background: mode === m ? "#2563eb" : "#fff", color: mode === m ? "#fff" : "#64748b" }}>
+                {m === "login" ? "Sign In" : "Create Account"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {mode === "forgot" && <p style={{ color: "#64748b", marginTop: 0 }}>Enter your email and we'll send a reset link.</p>}
+        {mode === "reset"  && <p style={{ color: "#64748b", marginTop: 0 }}>Enter your new password.</p>}
 
         {mode === "register" && (
           <>
@@ -76,21 +92,43 @@ function AuthScreen({ onLogin }) {
           </>
         )}
 
-        <label style={labelStyle}>Email</label>
-        <input style={inputStyle} type="email" placeholder="you@example.com"
-          value={email} onChange={e => setEmail(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && submit()} />
+        {mode !== "reset" && (
+          <>
+            <label style={labelStyle}>Email</label>
+            <input style={inputStyle} type="email" placeholder="you@example.com"
+              value={email} onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && submit()} />
+          </>
+        )}
 
-        <label style={labelStyle}>Password</label>
-        <input style={inputStyle} type="password" placeholder="••••••••"
-          value={password} onChange={e => setPassword(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && submit()} />
+        {mode !== "forgot" && (
+          <>
+            <label style={labelStyle}>Password</label>
+            <input style={inputStyle} type="password" placeholder="••••••••"
+              value={password} onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && submit()} />
+          </>
+        )}
 
         {error && <div style={{ color: "#dc2626", fontSize: "0.88rem", marginBottom: 10 }}>{error}</div>}
+        {info  && <div style={{ color: "#16a34a", fontSize: "0.88rem", marginBottom: 10 }}>{info}</div>}
 
         <button onClick={submit} disabled={loading} style={{ ...btnStyle("#2563eb"), width: "100%", padding: "0.65rem" }}>
-          {loading ? "…" : mode === "login" ? "Sign In" : "Create Account"}
+          {loading ? "…" : mode === "login" ? "Sign In" : mode === "register" ? "Create Account" : mode === "forgot" ? "Send Reset Link" : "Set New Password"}
         </button>
+
+        {mode === "login" && (
+          <button onClick={() => { setMode("forgot"); setError(""); setInfo("") }}
+            style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", fontSize: "0.85rem", marginTop: 10, width: "100%", textAlign: "center" }}>
+            Forgot password?
+          </button>
+        )}
+        {(mode === "forgot" || mode === "reset") && (
+          <button onClick={() => { setMode("login"); setError(""); setInfo("") }}
+            style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: "0.85rem", marginTop: 10, width: "100%", textAlign: "center" }}>
+            ← Back to sign in
+          </button>
+        )}
       </div>
     </div>
   )
@@ -383,7 +421,7 @@ function MainApp({ user, onLogout, onOpenProfile }) {
       {/* Stats */}
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
         <StatCard label="Snapshots"           value={stats.total_snapshots ?? 0} />
-        <StatCard label="Cancellations found" value={stats.total_cancellations ?? 0} />
+        <StatCard label="Openings found" value={stats.total_openings ?? 0} />
         <StatCard label="Last poll"           value={toPST(stats.last_poll)} />
       </div>
 
@@ -574,8 +612,8 @@ function MainApp({ user, onLogout, onOpenProfile }) {
       ))}
 
       {/* ── Activity ──────────────────────────────────────── */}
-      <h2>Recent Cancellations</h2>
-      {activity.length === 0 && <p style={{ color: "#888" }}>No cancellations detected yet — poller is watching!</p>}
+      <h2>Recent Availability Alerts</h2>
+      {activity.length === 0 && <p style={{ color: "#888" }}>No openings found yet — poller is watching!</p>}
       {activity.map((a, i) => (
         <div key={i} style={{ ...cardStyle, borderLeft: "4px solid #16a34a" }}>
           <strong>{a.campground_name}</strong>

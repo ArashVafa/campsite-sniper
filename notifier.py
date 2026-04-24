@@ -32,7 +32,7 @@ def _build_message(campground_name, campground_id, site_name, date, loop=""):
     booking_url = f"https://www.recreation.gov/camping/campgrounds/{campground_id}"
     return {
         "short": f"🏕 {campground_name}: Site {site_name}{loop_str} available on {date}!",
-        "long": f"""Cancellation detected at {campground_name}!
+        "long": f"""Availability found at {campground_name}!
 
 Site: {site_name}{loop_str}
 Date: {date}
@@ -41,7 +41,7 @@ Book now before someone else grabs it:
 {booking_url}
 
 — Campsite Sniper""",
-        "subject": f"🏕 Campsite available at {campground_name} on {date}!"
+        "subject": f"🏕 Site available at {campground_name} on {date}!"
     }
 
 
@@ -62,6 +62,33 @@ def _send_email_to(to_email: str, message: dict):
         console.print(f"[green]✓ Email sent to {to_email}[/green]")
     except Exception as e:
         console.print(f"[red]Email error ({to_email}): {e}[/red]")
+
+
+def send_reset_email(to_email: str, name: str, reset_url: str):
+    try:
+        from config import EMAIL_FROM, EMAIL_APP_PASSWORD
+        if not EMAIL_APP_PASSWORD:
+            console.print("[yellow]⚠ Reset email skipped (no app password set)[/yellow]")
+            return
+        msg = MIMEMultipart()
+        msg["From"] = EMAIL_FROM
+        msg["To"] = to_email
+        msg["Subject"] = "Reset your Campsite Sniper password"
+        msg.attach(MIMEText(f"""Hi {name},
+
+Click the link below to reset your password. It expires in 1 hour.
+
+{reset_url}
+
+If you didn't request this, you can ignore this email.
+
+— Campsite Sniper""", "plain"))
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(EMAIL_FROM, EMAIL_APP_PASSWORD)
+            server.sendmail(EMAIL_FROM, to_email, msg.as_string())
+        console.print(f"[green]✓ Reset email sent to {to_email}[/green]")
+    except Exception as e:
+        console.print(f"[red]Reset email error: {e}[/red]")
 
 
 def _send_ntfy(topic: str, message: dict):

@@ -4,6 +4,7 @@ import hmac
 import json
 import math
 import os
+import secrets
 import time
 import requests as req_lib
 from datetime import date as date_obj, timedelta
@@ -108,6 +109,13 @@ class WatchRequest(BaseModel):
     min_stay_required: Optional[int] = None
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
 class DateExpandRequest(BaseModel):
     start: str
     end: str
@@ -160,6 +168,29 @@ def update_profile(req: UpdateProfileRequest, current_user: dict = Depends(get_c
     return {"ok": True}
 
 
+@app.post("/api/auth/forgot-password")
+def forgot_password(req: ForgotPasswordRequest):
+    user = db.get_user_by_email(req.email)
+    if user:
+        token = secrets.token_hex(32)
+        db.create_reset_token(user["id"], token)
+        reset_url = f"{FRONTEND_ORIGIN}/reset?token={token}"
+        import notifier
+        notifier.send_reset_email(user["email"], user["name"], reset_url)
+    return {"ok": True}  # always return ok — don't reveal whether email exists
+
+
+@app.post("/api/auth/reset-password")
+def reset_password(req: ResetPasswordRequest):
+    if len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    user_id = db.use_reset_token(req.token)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Reset link is invalid or has expired")
+    db.update_password(user_id, hash_password(req.password))
+    return {"ok": True}
+
+
 # ── Watch endpoints (user-scoped) ──────────────────────────────────────────
 
 @app.get("/api/watches")
@@ -193,13 +224,18 @@ def get_activity(limit: int = 20, current_user: dict = Depends(get_current_user)
     placeholders = ",".join("?" * len(cg_ids))
     rows = conn.execute(f"""
         SELECT st.campground_id, st.site_id, st.date, st.detected_at,
-               COALESCE(c.name, st.campground_id) AS campground_name
+               COALESCE(
+                   (SELECT name FROM watches
+                    WHERE campground_id = st.campground_id AND user_id = ? LIMIT 1),
+                   st.campground_id
+               ) AS campground_name
         FROM state_transitions st
-        LEFT JOIN campgrounds c ON st.campground_id = c.id
-        WHERE st.to_status = 'Available' AND st.campground_id IN ({placeholders})
+        WHERE st.to_status = 'Available'
+          AND st.campground_id IN ({placeholders})
+          AND st.detected_at >= datetime('now', '-7 days')
         ORDER BY st.detected_at DESC
         LIMIT ?
-    """, cg_ids + [limit]).fetchall()
+    """, [current_user["user_id"]] + cg_ids + [limit]).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
@@ -226,7 +262,7 @@ def get_stats(current_user: dict = Depends(get_current_user)):
     ).fetchone()[0]
     last_poll = conn.execute("SELECT MAX(polled_at) FROM availability_snapshots").fetchone()[0]
     conn.close()
-    return {"total_snapshots": total_snapshots, "total_cancellations": total_cancellations, "last_poll": last_poll}
+    return {"total_snapshots": total_snapshots, "total_openings": total_cancellations, "last_poll": last_poll}
 
 
 # ── Campground search ──────────────────────────────────────────────────────
